@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ism or Fi‘l — Instinct Trainer</title>
+<link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#faf8f3;--sf:#fff;--tx:#1d2a26;--mu:#6b7770;--bd:#ddd8cc;--ac:#0f6b5c;--ism:#1b5fa8;--fil:#a8431b;--ok:#1f8a4c;--no:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121816;--sf:#1b2420;--tx:#e8eee9;--mu:#92a199;--bd:#2c3833;--ac:#3fb59f;--ism:#6ba8ee;--fil:#f08a5c;--ok:#4cc27e;--no:#ec6b5c}}
+:root[data-theme="dark"]{--bg:#121816;--sf:#1b2420;--tx:#e8eee9;--mu:#92a199;--bd:#2c3833;--ac:#3fb59f;--ism:#6ba8ee;--fil:#f08a5c;--ok:#4cc27e;--no:#ec6b5c}
+html{color-scheme:light dark;scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px}
+h1{font-size:1.25rem;margin:0 0 4px}
+.sub{color:var(--mu);font-size:.9rem;margin:0 0 16px}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:14px;padding:16px;margin-bottom:12px}
+.stats{display:flex;gap:8px;margin-bottom:12px}
+.stat{flex:1;background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:8px;text-align:center}
+.stat b{display:block;font-size:1.3rem}.stat span{font-size:.72rem;color:var(--mu)}
+button{font:inherit;cursor:pointer;border:1px solid var(--bd);background:var(--sf);color:var(--tx);border-radius:12px;padding:12px 14px}
+button.big{width:100%;text-align:left;margin-bottom:8px}
+button.big small{display:block;color:var(--mu)}
+button:disabled{opacity:.55;cursor:default}
+.ayah{direction:rtl;display:flex;flex-wrap:wrap;gap:6px 12px;font-family:"Amiri Quran","Traditional Arabic","Scheherazade New",serif;font-size:2rem;line-height:2.1;justify-content:center;padding:8px 0}
+.w{padding:0 8px;border-radius:10px;border:2px solid transparent}
+.w.t{background:color-mix(in srgb,var(--ac) 16%,transparent);border-color:var(--ac)}
+.w.tap{cursor:pointer}
+.w.good{background:color-mix(in srgb,var(--ok) 25%,transparent);border-color:var(--ok)}
+.w.bad{background:color-mix(in srgb,var(--no) 25%,transparent);border-color:var(--no)}
+.ref{text-align:center;color:var(--mu);font-size:.8rem}
+.ans{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.ans button{font-family:"Amiri Quran",serif;font-size:1.8rem;padding:14px}
+.ans small{display:block;font:.75rem system-ui;color:var(--mu)}
+#bI{border-color:var(--ism);color:var(--ism)}#bF{border-color:var(--fil);color:var(--fil)}
+.bar{height:6px;background:var(--bd);border-radius:3px;overflow:hidden;margin:4px 0 8px}
+.bar i{display:block;height:100%;width:100%;background:var(--ac);transform-origin:left}
+.fb{min-height:3.2em;text-align:center;margin-top:10px}
+.fb.ok b{color:var(--ok)}.fb.no b{color:var(--no)}
+.row{display:flex;gap:8px;justify-content:space-between;align-items:center}
+.link{background:none;border:none;color:var(--mu);padding:6px;text-decoration:underline}
+label{color:var(--mu);font-size:.9rem;display:flex;gap:8px;align-items:center}
+</style></head>
+<body><main id="app"></main>
+<script>
+// word format: arabic[:n|v[:gloss_with_underscores]] ; untagged = particle/pronoun (not tested). q=0 -> non-Qur’anic (≈10%)
+const RAW=[
+["1:2","ٱلْحَمْدُ:n:the_praise لِلَّهِ:n:for_Allah رَبِّ:n:Lord ٱلْعَـٰلَمِينَ:n:the_worlds"],
+["1:3-4","ٱلرَّحْمَـٰنِ:n:the_Most_Gracious ٱلرَّحِيمِ:n:the_Most_Merciful مَـٰلِكِ:n:Owner يَوْمِ:n:day ٱلدِّينِ:n:the_Judgement"],
+["1:5","إِيَّاكَ نَعْبُدُ:v:we_worship وَإِيَّاكَ نَسْتَعِينُ:v:we_seek_help"],
+["1:6","ٱهْدِنَا:v:guide_us ٱلصِّرَٰطَ:n:the_path ٱلْمُسْتَقِيمَ:n:the_straight"],
+["112:1","قُلْ:v:say هُوَ ٱللَّهُ:n:Allah أَحَدٌ:n:One"],
+["112:3","لَمْ يَلِدْ:v:He_begets وَلَمْ يُولَدْ:v:is_begotten"],
+["114:1","قُلْ:v:say أَعُوذُ:v:I_seek_refuge بِرَبِّ:n:in_the_Lord ٱلنَّاسِ:n:mankind"],
+["114:2-3","مَلِكِ:n:King ٱلنَّاسِ:n:mankind إِلَـٰهِ:n:God ٱلنَّاسِ:n:mankind"],
+["108:1","إِنَّآ أَعْطَيْنَـٰكَ:v:We_have_given_you ٱلْكَوْثَرَ:n:al-Kawthar"],
+["108:2","فَصَلِّ:v:so_pray لِرَبِّكَ:n:to_your_Lord وَٱنْحَرْ:v:and_sacrifice"],
+["103:2","إِنَّ ٱلْإِنسَـٰنَ:n:the_human لَفِى خُسْرٍ:n:loss"],
+["103:3","ٱلَّذِينَ ءَامَنُوا۟:v:believed وَعَمِلُوا۟:v:and_did ٱلصَّـٰلِحَـٰتِ:n:the_good_deeds وَتَوَاصَوْا۟:v:and_advised_each_other بِٱلْحَقِّ:n:with_the_truth"],
+["96:1","ٱقْرَأْ:v:read بِٱسْمِ:n:in_the_name_of رَبِّكَ:n:your_Lord ٱلَّذِى خَلَقَ:v:created"],
+["87:1","سَبِّحِ:v:glorify ٱسْمَ:n:name رَبِّكَ:n:your_Lord ٱلْأَعْلَى:n:the_Most_High"],
+["93:3","مَا وَدَّعَكَ:v:has_forsaken_you رَبُّكَ:n:your_Lord وَمَا قَلَىٰ:v:nor_detested"],
+["55:13","فَبِأَىِّ ءَالَآءِ:n:favours رَبِّكُمَا:n:your_Lord تُكَذِّبَانِ:v:you_both_deny"],
+["20:25-26","قَالَ:v:he_said رَبِّ:n:my_Lord ٱشْرَحْ:v:expand لِى صَدْرِى:n:my_chest وَيَسِّرْ:v:and_ease لِىٓ أَمْرِى:n:my_affair"],
+["2:286","لَا يُكَلِّفُ:v:burdens ٱللَّهُ:n:Allah نَفْسًا:n:a_soul إِلَّا وُسْعَهَا:n:its_capacity"],
+["2:255","ٱللَّهُ:n:Allah لَآ إِلَـٰهَ:n:god إِلَّا هُوَ ٱلْحَىُّ:n:the_Ever-Living ٱلْقَيُّومُ:n:the_Sustainer"],
+["94:5","فَإِنَّ مَعَ ٱلْعُسْرِ:n:hardship يُسْرًا:n:ease"],
+["—","كَتَبَ:v:wrote ٱلطَّالِبُ:n:the_student ٱلدَّرْسَ:n:the_lesson"],
+["—","يَقْرَأُ:v:reads ٱلْوَلَدُ:n:the_boy كِتَابًا:n:a_book"]
+];
+// regroup: multi-word chunks above hold untagged words; split on spaces, tag belongs to the last word of a "word:tag" token
+const AY=RAW.map(([r,s])=>{const ws=[];s.split(' ').forEach(tok=>{const p=tok.split(':');ws.push({w:p[0],t:p[1]||null,g:(p[2]||'').replace(/_/g,' ')})});return{r,ws,q:r!=='—'}});
+const ITEMS=[];AY.forEach((a,i)=>a.ws.forEach((w,j)=>{if(w.t)ITEMS.push({id:i+'.'+j,a:i,j,t:w.t})}));
+let S={st:{},tot:0,ok:0,fast:0,best:0};
+try{const x=localStorage.getItem('ismfil');if(x)S=Object.assign(S,JSON.parse(x))}catch(e){}
+const save=()=>{try{localStorage.setItem('ismfil',JSON.stringify(S))}catch(e){}};
+let streak=0,cur=null,t0=0,locked=false,mode='',showGloss=false,raf=0;
+const $=s=>document.querySelector(s),app=$('#app');
+const miss=id=>(S.st[id]&&S.st[id].m)||0;
+function pick(pool){const t=Math.random()<.5?'v':'n';let p=pool.filter(i=>i.t===t);if(!p.length)p=pool;
+ p=p.filter(i=>!cur||i.id!==cur.id).length?p.filter(i=>!cur||i.id!==cur.id):p;
+ const w=p.map(i=>1+3*miss(i.id)),sum=w.reduce((a,b)=>a+b,0);let r=Math.random()*sum;
+ for(let k=0;k<p.length;k++){r-=w[k];if(r<=0)return p[k]}return p[0]}
+function statsBar(){const acc=S.tot?Math.round(100*S.ok/S.tot):0,ins=S.tot?Math.round(100*S.fast/S.tot):0;
+ return `<div class="stats"><div class="stat"><b>${streak}</b><span>streak</span></div><div class="stat"><b>${acc}%</b><span>accuracy</span></div><div class="stat"><b>${ins}%</b><span>instinct (&lt;2s)</span></div></div>`}
+function menu(){cancelAnimationFrame(raf);mode='';const m=Object.values(S.st).filter(x=>x.m>0).length;
+ app.innerHTML=`<h1>اسم أم فعل؟ &nbsp;Ism or Fi‘l?</h1><p class="sub">No rules. See the word, answer fast, let the pattern sink in. Content is ~90% Qur’anic.</p>${statsBar()}
+ <button class="big" onclick="startFlash()"><b>Flash</b><small>One highlighted word inside its āyah. Noun or verb? Answer in under 2 seconds.</small></button>
+ <button class="big" onclick="startHunt()"><b>Hunt</b><small>Tap every verb (or every noun) in the āyah.</small></button>
+ <button class="big" onclick="startFlash(true)" ${m?'':'disabled'}><b>Review misses (${m})</b><small>Only words you got wrong before.</small></button>
+ <div class="card"><label><input type="checkbox" id="gl" ${showGloss?'checked':''} onchange="showGloss=this.checked"> Show English meaning before answering (easier)</label></div>
+ <button class="link" onclick="if(confirm('Reset all progress?')){S={st:{},tot:0,ok:0,fast:0,best:0};save();menu()}">Reset progress</button>`}
+function ayahHTML(a,tg,tap){return `<div class="ayah">${a.ws.map((w,j)=>`<span class="w${j===tg?' t':''}${tap?' tap':''}" data-j="${j}">${w.w}</span>`).join('')}</div><div class="ref">${a.q?'Qur’an '+a.r:'Practice sentence'}</div>`}
+function startFlash(rev){mode=rev?'rev':'flash';next()}
+function next(){cancelAnimationFrame(raf);locked=false;
+ if(mode==='hunt')return huntNext();
+ let pool=ITEMS;if(mode==='rev'){pool=ITEMS.filter(i=>miss(i.id)>0);if(!pool.length){menu();return}}
+ // keep Qur’an share ≈90%
+ const qp=pool.filter(i=>AY[i.a].q),op=pool.filter(i=>!AY[i.a].q);if(qp.length&&op.length&&Math.random()<.9)pool=qp;
+ cur=pick(pool);const a=AY[cur.a],w=a.ws[cur.j];t0=performance.now();
+ app.innerHTML=`<div class="row"><button class="link" onclick="menu()">← Menu</button></div>${statsBar()}<div class="bar"><i id="tb"></i></div><div class="card">${ayahHTML(a,cur.j)}${showGloss?`<div class="ref">${w.g}</div>`:''}</div>
+ <div class="ans"><button id="bI" onclick="ans('n')">اسم<small>noun · N</small></button><button id="bF" onclick="ans('v')">فعل<small>verb · V</small></button></div><div class="fb" id="fb"></div>`;
+ const tb=$('#tb');const f=()=>{const p=Math.max(0,1-(performance.now()-t0)/2000);tb.style.transform=`scaleX(${p})`;if(p>0&&!locked)raf=requestAnimationFrame(f)};f()}
+function ans(t){if(locked)return;locked=true;cancelAnimationFrame(raf);const ms=performance.now()-t0,ok=t===cur.t,w=AY[cur.a].ws[cur.j];
+ S.tot++;if(ok){S.ok++;if(ms<2000)S.fast++;streak++;S.best=Math.max(S.best,streak)}else streak=0;
+ const r=S.st[cur.id]||(S.st[cur.id]={m:0});r.m=ok?Math.max(0,r.m-1):r.m+2;save();
+ const fb=$('#fb');fb.className='fb '+(ok?'ok':'no');
+ fb.innerHTML=`<b>${ok?'Correct':'Wrong'}</b> · ${w.t==='v'?'فعل (verb)':'اسم (noun)'} · “${w.g}” · ${(ms/1000).toFixed(1)}s<br><button onclick="next()" style="margin-top:8px">Next ↵</button>`;
+ document.querySelector('.w.t').classList.add(ok?'good':'bad')}
+function startHunt(){mode='hunt';next()}
+let H=null;
+function huntNext(){const cand=AY.map((a,i)=>({a,i})).filter(x=>x.a.q||Math.random()<.1);const c=cand[Math.floor(Math.random()*cand.length)];
+ const types=['v','n'].filter(t=>c.a.ws.some(w=>w.t===t));const t=types[Math.floor(Math.random()*types.length)];
+ H={a:c.a,t,need:c.a.ws.filter(w=>w.t===t).length,found:0,err:0,done:{}};
+ app.innerHTML=`<div class="row"><button class="link" onclick="menu()">← Menu</button></div>${statsBar()}<div class="card"><p style="text-align:center;margin:0"><b>Tap every ${t==='v'?'فعل (verb)':'اسم (noun)'}</b></p>${ayahHTML(H.a,-1,true)}<div class="fb" id="fb"></div></div>`;
+ document.querySelectorAll('.w').forEach(el=>el.onclick=()=>hunt(el))}
+function hunt(el){if(H.found>=H.need||el.classList.contains('good')||el.classList.contains('bad'))return;
+ const w=H.a.ws[+el.dataset.j];
+ if(!w.t){el.style.opacity=.5;return}
+ S.tot++;
+ if(w.t===H.t){el.classList.add('good');H.found++;S.ok++;streak++;S.best=Math.max(S.best,streak)}
+ else{el.classList.add('bad');H.err++;streak=0}
+ save();el.title=w.g;
+ if(H.found>=H.need){document.querySelectorAll('.w').forEach(e=>{const x=H.a.ws[+e.dataset.j];if(x.t&&!e.classList.contains('good')&&!e.classList.contains('bad'))e.classList.add(x.t==='v'?'':'' )});
+  $('#fb').className='fb '+(H.err?'no':'ok');
+  $('#fb').innerHTML=`<b>${H.err?H.err+' wrong tap(s)':'Clean'}</b> · found ${H.found}/${H.need}<br>${H.a.ws.filter(x=>x.t).map(x=>`<span style="direction:rtl;font-family:'Amiri Quran',serif;font-size:1.2rem">${x.w}</span> ${x.t==='v'?'فعل':'اسم'} — ${x.g}`).join('<br>')}<br><button onclick="next()" style="margin-top:8px">Next ↵</button>`}}
+document.addEventListener('keydown',e=>{if(mode==='flash'||mode==='rev'){if(!locked){if(e.key==='n'||e.key==='N')ans('n');if(e.key==='v'||e.key==='V')ans('v')}else if(e.key==='Enter'||e.key===' '){e.preventDefault();next()}}})
+menu();
+</script></body></html>
