@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Major System Reflex Trainer</title>
+<style>
+:root{--bg:#f6f5f1;--fg:#1a1a1a;--mut:#6b6b66;--card:#fff;--bd:#dcdad2;--ac:#1f6feb;--ok:#1a7f37;--bad:#c62828;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15161a;--fg:#ececea;--mut:#9a9a94;--card:#1f2026;--bd:#33343c;--ac:#6ea8ff;--ok:#4cc26b;--bad:#ff6b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15161a;--fg:#ececea;--mut:#9a9a94;--card:#1f2026;--bd:#33343c;--ac:#6ea8ff;--ok:#4cc26b;--bad:#ff6b6b;color-scheme:dark}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,-apple-system,sans-serif}
+main{max-width:640px;margin:0 auto;padding:12px}
+h1{font-size:1.1rem;margin:4px 0}h2{font-size:1.15rem;margin:10px 0 2px}h3{font-size:1rem;margin:0 0 6px}
+nav{display:flex;gap:6px;overflow-x:auto;padding:6px 0}
+nav button{flex:none}
+button{font:inherit;padding:9px 13px;border:1px solid var(--bd);background:var(--card);color:var(--fg);border-radius:8px;cursor:pointer}
+button.on,button.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+input[type=text],input:not([type]){font:inherit;width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);margin:6px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px;margin:10px 0}
+.mut{color:var(--mut);font-size:.9rem}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.big{font-size:4.5rem;font-weight:700;text-align:center;line-height:1.1;padding:14px 0}
+button.tap{display:block;width:100%;background:transparent;border:2px dashed var(--bd);color:var(--fg)}
+.snd{text-align:center;font-size:1.4rem;min-height:2rem;color:var(--ac)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}.chips span{border:1px solid var(--bd);border-radius:8px;padding:3px 8px;background:var(--card)}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;text-align:center}
+.grid div{border:1px solid var(--bd);border-radius:8px;padding:8px 2px;background:var(--card);font-size:1.2rem}
+.grid small{display:none;color:var(--ac);font-size:.8rem}.grid.sh small{display:block}
+table{width:100%;border-collapse:collapse}td,th{border-bottom:1px solid var(--bd);padding:4px;text-align:left}
+</style></head><body><main>
+<h1>Major System Reflex Trainer</h1>
+<div class="mut" id="hdr"></div>
+<details class="card"><summary>Sound map</summary><div class="chips" id="map"></div></details>
+<nav>
+<button data-t="1" onclick="go(1)">Phase 1</button><button data-t="2" onclick="go(2)">Phase 2</button><button data-t="3" onclick="go(3)">Phase 3</button><button data-t="4" onclick="go(4)">Phase 4</button><button data-t="5" onclick="go(5)">Tools</button><button data-t="6" onclick="go(6)">Log</button>
+</nav>
+<div id="view"></div>
+</main>
+<script>
+const M=['sss','tuh','nuh','muh','ruh','luh','shh','kuh','fuh','puh'];
+const $=id=>document.getElementById(id);
+let S={start:Date.now(),passed:{},weak:{},weakList:[],best:{},daily:{},sess:{},sets:{}};
+try{const r=localStorage.getItem('msr');if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem('msr',JSON.stringify(S))}catch(e){}};
+const today=()=>new Date().toISOString().slice(0,10);
+const snd=s=>[...s].filter(c=>/\d/.test(c)).map(c=>M[+c]).join('-');
+const vow=s=>[...s].filter(c=>/\d/.test(c)).map(c=>M[+c][0].toUpperCase()+M[+c].slice(1)).join('');
+const rnd=(n,len)=>Array.from({length:n},()=>String(Math.floor(Math.random()*10**len)).padStart(len,'0'));
+const shuf=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function wd(w){w=w.toLowerCase().replace(/[^a-z]/g,'');let o='',i=0;
+ while(i<w.length){const c=w[i],n=w[i+1];let d='',s=1;
+  if((c=='s'||c=='c')&&n=='h'){d='6';s=2}
+  else if(c=='t'&&n=='h'){d='1';s=2}
+  else if(c=='p'&&n=='h'){d='8';s=2}
+  else if(c=='c'&&(n=='k'||n=='q')){d='7';s=2}
+  else{
+   if('sz'.includes(c))d='0';else if('td'.includes(c))d='1';else if(c=='n')d='2';else if(c=='m')d='3';
+   else if(c=='r')d='4';else if(c=='l')d='5';else if(c=='j')d='6';else if('kgqc'.includes(c))d='7';
+   else if(c=='x')d='70';else if('fv'.includes(c))d='8';else if('pb'.includes(c))d='9';
+   if(n==c)s=2;
+  }
+  o+=d;i+=s}
+ return o}
+let ac;function beep(){try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=880;g.gain.value=.05;o.connect(g);g.connect(ac.destination);o.start();o.stop(ac.currentTime+.04)}catch(e){}}
+$('map').innerHTML=M.map((m,i)=>`<span><b>${i}</b> ${m}</span>`).join('');
+let mt=null,sit=null,cur=null,tab=1,pt=0,pl=[],rc=0,rst=0;
+document.addEventListener('keydown',e=>{if(e.code=='Space'&&cur&&document.activeElement.tagName!='INPUT'){e.preventDefault();cur()}});
+const fmt=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+function hdr(){const d=Math.floor((Date.now()-S.start)/864e5)+1;const r=d<=3?1:d<=6?2:d<=10?3:4;
+ $('hdr').textContent=`Day ${d} · schedule says Phase ${r} · today: ${S.daily[today()]||0} Phase 4 reps`}
+function sess(min,key){return `<div class="card"><b>Session</b> <span id="stc">${fmt(min*60)}</span>
+ <div class="row"><button onclick="sessGo(${min})">Start timer</button><button onclick="sessLog('${key}')" id="sl">Log session (${S.sess[today()+key]||0} today)</button></div></div>`}
+function sessGo(min){clearInterval(sit);let r=min*60;$('stc').textContent=fmt(r);
+ sit=setInterval(()=>{r--;if($('stc'))$('stc').textContent=fmt(Math.max(r,0));if(r<=0){clearInterval(sit);beep();setTimeout(beep,250);setTimeout(beep,500)}},1000)}
+function sessLog(k){const x=today()+k;S.sess[x]=(S.sess[x]||0)+1;save();$('sl').textContent=`Log session (${S.sess[x]} today)`}
+function stopAll(){clearInterval(mt);clearInterval(sit);pt=0;pl=[];rc=0;cur=null}
+function go(n){stopAll();tab=n;({1:p1,2:p2,3:p3,4:p4,5:tools,6:log})[n]();
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',+b.dataset.t==n));hdr();scrollTo(0,0)}
+
+function tapDrill(items,limit,done){
+ let i=0,slow=[],t0,last='';const T=performance.now(),box=$('drill');
+ function nx(){const dt=performance.now()-t0;last=(dt/1000).toFixed(2)+'s';if(limit&&dt>limit)slow.push(items[i]);i++;show()}
+ function show(){
+  if(i>=items.length){cur=null;done(slow,performance.now()-T);return}
+  box.innerHTML=`<div class="mut">${i+1}/${items.length}${last?' · last '+last:''}${limit?' · limit '+limit/1000+'s':''}</div>
+  <button class="big tap" id="nx">${items[i]}</button><div class="snd" id="sn">&nbsp;</div>
+  <div class="row"><button id="rv">Check sound</button><button id="qt">Quit</button></div>
+  <div class="mut">Say the sound out loud, then tap (or Space). Slower than the limit = marked weak.</div>`;
+  $('nx').onclick=nx;$('rv').onclick=()=>$('sn').textContent=snd(items[i]);$('qt').onclick=()=>{cur=null;box.innerHTML=''};
+  t0=performance.now();cur=nx}
+ show()}
+const out=h=>{$('drill').innerHTML=`<div class="card">${h}</div>`};
+
+/* PHASE 1 */
+const L30=[3,7,0,9,1,4,6,2,8,5,1,9,4,0,7,3,8,2,5,6,9,2,5,0,8,1,6,3,7,4].map(String);
+function p1(){$('view').innerHTML=`<h2>Phase 1 · Single digit reflex</h2>
+<p class="mut">Days 1-3 · 5 min · 2x per day. Out loud. If you say the number name even once, restart the set.</p>${sess(5,'1')}
+<div class="card"><h3>Set 1 forward / Set 2 backward · 10 rounds each</h3>
+<div class="big" id="mdg">–</div><div class="snd" id="msn">&nbsp;</div><div class="mut" id="mpr" style="text-align:center">&nbsp;</div>
+<div class="row"><button class="pri" onclick="met('f')">Set 1 forward</button><button class="pri" onclick="met('b')">Set 2 backward</button><button onclick="clearInterval(mt)">Stop</button></div>
+<div class="row"><label>Beat <input type="range" id="ms" min="500" max="1500" step="100" value="1000" oninput="$('msv').textContent=this.value+' ms'"> <span id="msv">1000 ms</span></label></div>
+<label><input type="checkbox" id="hs"> Hide sound (reflex mode)</label> · <label><input type="checkbox" id="bp" checked> Click</label></div>
+<div class="card"><h3>Set 3 · Random x30</h3><p class="mut">Pause over 1 sec on a digit = weak. Pass = zero pauses.</p>
+<button class="pri" onclick="s3()">Start Set 3</button>
+<button onclick="wk()" ${S.weakList.length?'':'disabled'}>Weak drill${S.weakList.length?' ('+S.weakList.join(', ')+' x20)':''}</button></div>
+<div id="drill"></div>`}
+function met(dir){clearInterval(mt);let k=0;const ms=+$('ms').value;
+ const f=()=>{if(k>=100){clearInterval(mt);const x=today()+dir;S.sets[x]=(S.sets[x]||0)+1;save();$('mdg').textContent='Done';$('msn').innerHTML='&nbsp;';return}
+  const d=dir=='f'?k%10:9-k%10;$('mdg').textContent=d;$('msn').textContent=$('hs').checked?'':M[d];
+  $('mpr').textContent=`Round ${Math.floor(k/10)+1}/10 · beat ${k%10+1}/10`;if($('bp').checked)beep();k++};
+ f();mt=setInterval(f,ms)}
+function s3(){tapDrill(L30,1000,slow=>{const u=[...new Set(slow)];u.forEach(d=>S.weak[d]=(S.weak[d]||0)+1);S.weakList=u;
+ if(!u.length)S.passed[1]=true;save();
+ out(u.length?`<b class="bad">Not passed.</b> Weak digits: ${u.join(', ')}. Do each 20x extra, then stay in Phase 1 one more day.`:`<b class="ok">Pass: zero pauses. Go to Phase 2.</b>`)})}
+function wk(){const l=S.weakList;if(!l.length)return;const it=shuf(l.flatMap(d=>Array(20).fill(d)));
+ tapDrill(it,1000,s=>{S.weakList=[];save();out(`Weak drill done. Slow reps: ${s.length}/${it.length}.`)})}
+
+/* PHASE 2 */
+const P2=['12','34','50','71','89','20','46','91','15','67'];
+function p2(){$('view').innerHTML=`<h2>Phase 2 · Sound pairs</h2>
+<p class="mut">Days 4-6 · 6 min · 2x per day. Never say single digits. One breath per pair.</p>${sess(6,'2')}
+<div class="card"><h3>Set 1 · Pair list x5, under 20 s</h3>
+<div class="grid" id="pg">${P2.map(p=>`<div>${p}<small>${snd(p)}</small></div>`).join('')}</div>
+<div class="row"><button class="pri" id="p2b" onclick="p2s()">Start pass</button><button onclick="pl=[];pt=0;$('p2b').textContent='Start pass';$('p2l').innerHTML=''">Reset</button>
+<label><input type="checkbox" onchange="$('pg').classList.toggle('sh',this.checked)"> Show sounds</label></div>
+<div id="p2l" class="mut"></div><div class="mut">Best: ${S.best.p2?S.best.p2.toFixed(1)+'s':'–'} · target under 20 s</div></div>
+<div class="card"><h3>Set 2 · Real world x20</h3><p class="mut">Clock, page number, battery, room number. Say the sounds, not the name. 11:47 = tuh-tuh, ruh-kuh.</p>
+<div class="row"><button class="pri" onclick="rc=Math.min(20,rc+1);$('rc').textContent=rc">+1 number</button><b><span id="rc">0</span>/20</b><button onclick="rc=0;$('rc').textContent=0">Reset</button></div>
+<button onclick="tapDrill(rnd(20,2),1000,s=>out('Random pair drill done. Slow: '+s.length+'/20'+(s.length?' ('+s.join(', ')+')':'')))">Or: 20 random pairs on screen</button></div>
+<div class="card"><h3>Pass test</h3><p class="mut">20 random pairs, limit 1 s each. Sounds must come before the number name.</p>
+<button class="pri" onclick="p2t()">Run pass test</button> ${S.passed[2]?'<b class="ok">passed</b>':''}</div><div id="drill"></div>`}
+function p2s(){const b=$('p2b');
+ if(!pt){pt=performance.now();b.textContent='Stop pass'}
+ else{const s=(performance.now()-pt)/1000;pt=0;pl.push(s);b.textContent='Start pass';
+  if(!S.best.p2||s<S.best.p2){S.best.p2=s;save()}
+  $('p2l').innerHTML=pl.map((x,i)=>`Pass ${i+1}: ${x.toFixed(1)} s ${x<20?'<span class="ok">✓</span>':''}`).join('<br>')+(pl.length>=5?'<br><b>5 passes done.</b>':'')}}
+function p2t(){tapDrill(rnd(20,2),1000,s=>{if(!s.length){S.passed[2]=true;save()}
+ out(s.length?`<b class="bad">Not passed.</b> Slow: ${s.join(', ')}. Repeat.`:'<b class="ok">Passed. Go to Phase 3.</b>')})}
+
+/* PHASE 3 */
+const L3=['421','905','317','648','273','590','184','726','039','861'];
+function p3(){$('view').innerHTML=`<h2>Phase 3 · Three-digit words</h2>
+<p class="mut">Days 7-10 · 7 min · 1x per day. First 2 sounds start the word, 3rd sound ends it. Vowels are free filler.</p>${sess(7,'3')}
+<div class="card"><h3>Set 1 · Slow build, 3x each</h3><p class="mut">Sounds, then vowels, then a real word. Type the word to check its consonant sounds.</p><button class="pri" onclick="p3a()">Start Set 1 (30 steps)</button></div>
+<div class="card"><h3>Set 2 · Speed</h3><p class="mut">Number to word directly. 10 numbers in 30 s. Best: ${S.best.p3?(S.best.p3/1000).toFixed(1)+'s':'–'}</p><button class="pri" onclick="p3b()">Start Set 2</button></div>
+<div class="card"><h3>Pass test</h3><p class="mut">10 new 3-digit numbers, limit 2 s each.</p><button class="pri" onclick="p3t()">Run pass test</button> ${S.passed[3]?'<b class="ok">passed</b>':''}</div><div id="drill"></div>`}
+function p3a(){let i=0;const it=L3.flatMap(x=>[x,x,x]),box=$('drill');
+ const show=()=>{if(i>=it.length){box.innerHTML='<div class="card"><b>Set 1 done.</b></div>';return}
+  const n=it[i];
+  box.innerHTML=`<div class="mut">${i+1}/30</div><div class="big">${n}</div>
+  <div class="row"><button id="a">1 Sounds</button><button id="b">2 Vowels</button></div><div class="snd" id="sn">&nbsp;</div>
+  <input id="w" placeholder="3 · type your word" autocomplete="off" autocapitalize="off"><div id="wf" class="mut"></div><button class="pri" id="nx">Next</button>`;
+  $('a').onclick=()=>$('sn').textContent=snd(n);$('b').onclick=()=>$('sn').textContent=vow(n);
+  $('w').oninput=e=>{const d=wd(e.target.value);$('wf').innerHTML=d?`Word reads ${d} `+(d==n?'<b class="ok">✓ match</b>':'<b class="bad">✗ need '+n+'</b>'):''};
+  $('nx').onclick=()=>{i++;show()}};show()}
+function p3b(){tapDrill(shuf(L3),0,(s,t)=>{const ok=t<=30000;if(!S.best.p3||t<S.best.p3)S.best.p3=t;save();
+ out(`Time: <b>${(t/1000).toFixed(1)} s</b> ${ok?'<span class="ok">✓ under 30 s</span>':'<span class="bad">over 30 s, repeat</span>'}`)})}
+function p3t(){tapDrill(rnd(10,3),2000,s=>{if(!s.length){S.passed[3]=true;save()}
+ out(s.length?`<b class="bad">Not passed.</b> Slow: ${s.join(', ')}.`:'<b class="ok">Passed. Go to Phase 4.</b>')})}
+
+/* PHASE 4 */
+function p4(){$('view').innerHTML=`<h2>Phase 4 · Second nature</h2>
+<p class="mut">Day 11 onwards · 3 min · 20 random numbers every day. No long sessions.</p>${sess(3,'4')}
+<div class="card"><h3>Daily 20</h3><p class="mut">Mix of 2 to 5 digits (prices, phone chunks). Today: <b>${S.daily[today()]||0}</b> done.</p>
+<button class="pri" onclick="p4d()">Start daily 20</button></div>
+<div class="card"><h3>Background targets</h3><ul class="mut"><li>Phone numbers: 98765 = puh-fuh-kuh-shh-luh</li><li>Bike plates: TS09... → tuh-sss, sss-puh</li><li>Prices: 499 → ruh-puh-puh = rope</li></ul></div><div id="drill"></div>`}
+function p4d(){const it=[...rnd(5,2),...rnd(5,3),...rnd(5,4),...rnd(5,5)];
+ tapDrill(shuf(it),0,(s,t)=>{S.daily[today()]=(S.daily[today()]||0)+20;save();hdr();out(`Daily 20 done in ${(t/1000).toFixed(0)} s. Today total: ${S.daily[today()]}.`)})}
+
+/* TOOLS */
+function tools(){$('view').innerHTML=`<h2>Tools</h2>
+<div class="card"><h3>Number → sounds</h3><input id="tn" inputmode="numeric" placeholder="e.g. 98765" oninput="$('tno').innerHTML=snd(this.value)+'<br>'+vow(this.value)"><div id="tno" class="snd" style="text-align:left;font-size:1.1rem"></div></div>
+<div class="card"><h3>Word → digits</h3><input id="tw" placeholder="e.g. rope" autocapitalize="off" oninput="$('two').textContent=wd(this.value)"><div id="two" class="snd" style="text-align:left"></div>
+<p class="mut">Letter-based approximation of the sound map. Silent letters and soft c/g can be off.</p></div>`}
+
+/* LOG */
+function log(){const days=Object.keys(S.daily).sort().slice(-14).reverse();
+ const sets=k=>Object.keys(S.sess).filter(x=>x.startsWith(k)).length;
+ $('view').innerHTML=`<h2>Log</h2>
+<div class="card"><h3>Pass tests</h3><table>${[1,2,3].map(p=>`<tr><td>Phase ${p}</td><td>${S.passed[p]?'<span class="ok">passed</span>':'not passed'}</td></tr>`).join('')}</table></div>
+<div class="card"><h3>Bests</h3><table><tr><td>Phase 2 pair list</td><td>${S.best.p2?S.best.p2.toFixed(1)+' s (target &lt;20)':'–'}</td></tr><tr><td>Phase 3 speed set</td><td>${S.best.p3?(S.best.p3/1000).toFixed(1)+' s (target ≤30)':'–'}</td></tr></table></div>
+<div class="card"><h3>Weak digit marks</h3>${Object.keys(S.weak).length?'<div class="chips">'+Object.keys(S.weak).sort().map(d=>`<span><b>${d}</b> ×${S.weak[d]}</span>`).join('')+'</div>':'<span class="mut">None.</span>'}</div>
+<div class="card"><h3>Phase 4 daily reps</h3>${days.length?'<table>'+days.map(d=>`<tr><td>${d}</td><td>${S.daily[d]}</td></tr>`).join('')+'</table>':'<span class="mut">None.</span>'}</div>
+<div class="card"><h3>Strict rules</h3><ol><li><b>Never translate.</b> No “4 is R because four”. Feel 4 = ruh.</li><li><b>Out loud only.</b> Whisper counts, silent does not.</li><li><b>Speed over accuracy</b> in Phases 1 and 2. Speed builds reflex, slow builds thinking.</li></ol>
+<p class="mut">Setup: phone timer on, sit, no music.</p></div>
+<button onclick="if(rst){localStorage.removeItem('msr');location.reload()}else{rst=1;this.textContent='Tap again to erase all progress'}">Reset all progress</button>`}
+go(1);
+</script></body></html>
