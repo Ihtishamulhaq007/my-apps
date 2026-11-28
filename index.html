@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Games</title>
+<style>
+:root{--bg:#f6f5f1;--fg:#1a1a1a;--mut:#6b6b66;--card:#fff;--bd:#dcdad2;--ac:#1f6feb;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#15161a;--fg:#ececea;--mut:#9a9a94;--card:#1f2026;--bd:#33343c;--ac:#6ea8ff;color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:1.2rem;margin:0 0 10px}
+input{font:inherit;width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg)}
+ul{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
+a{display:block;padding:12px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);text-decoration:none}
+a:hover{border-color:var(--ac)}
+a b{color:var(--ac);display:block}
+a small{color:var(--mut);word-break:break-all}
+.mut{color:var(--mut);font-size:.9rem}
+.err{border:1px solid var(--bd);border-radius:8px;padding:12px;background:var(--card)}
+code{background:var(--bg);padding:1px 5px;border-radius:4px}
+</style></head><body><main>
+<h1>Games</h1>
+<input id="q" placeholder="Filter" autocomplete="off">
+<ul id="list"></ul>
+<div id="msg" class="mut">Loading…</div>
+<script>
+// Set both only if you use a custom domain (auto-detect fails there).
+const CFG = {owner: '', repo: ''};
+
+const $ = id => document.getElementById(id);
+let items = [];
+
+function repoInfo() {
+  if (CFG.owner && CFG.repo) return CFG;
+  const h = location.hostname;
+  if (!h.endsWith('.github.io')) throw new Error('Not a github.io host. Set CFG.owner and CFG.repo in this file.');
+  const owner = h.split('.')[0];
+  const segs = location.pathname.split('/').filter(Boolean);
+  if (segs.length && segs[segs.length - 1].includes('.')) segs.pop();
+  return {owner, repo: segs.length ? segs[0] : h};
+}
+
+function render() {
+  const q = $('q').value.toLowerCase();
+  const shown = items.filter(i => (i.title + ' ' + i.name).toLowerCase().includes(q));
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  $('list').innerHTML = shown.map(i =>
+    `<li><a href="${i.url}"><b>${esc(i.title)}</b><small>${esc(i.name)}/</small></a></li>`).join('');
+  $('msg').textContent = `${shown.length} of ${items.length}`;
+}
+
+async function title(name) {
+  const url = new URL(encodeURIComponent(name) + '/', location.href).href;
+  try {
+    const r = await fetch(url + 'index.html', {cache: 'no-cache'});
+    if (!r.ok) return null;
+    const t = new DOMParser().parseFromString(await r.text(), 'text/html').title.trim();
+    return {name, url, title: t || name};
+  } catch (e) { return null; }
+}
+
+async function load() {
+  try {
+    const {owner, repo} = repoInfo();
+    const key = `dirs:${owner}/${repo}`;
+    try {
+      const c = JSON.parse(localStorage.getItem(key) || 'null');
+      if (c && Date.now() - c.t < 600000) { items = c.items; render(); return; }
+    } catch (e) {}
+    const r = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/`);
+    if (!r.ok) throw new Error(`GitHub API ${r.status}` + (r.status === 403 ? ' (rate limit, retry later)' : ''));
+    const names = (await r.json()).filter(f => f.type === 'dir' && !f.name.startsWith('.')).map(f => f.name);
+    items = (await Promise.all(names.map(title))).filter(Boolean)
+      .sort((a, b) => a.title.localeCompare(b.title, undefined, {numeric: true}));
+    try { localStorage.setItem(key, JSON.stringify({t: Date.now(), items})); } catch (e) {}
+    render();
+  } catch (e) {
+    $('msg').innerHTML = `<div class="err">Failed: ${e.message}<br>Needs a public repo served on GitHub Pages. Local <code>file://</code> does not work.</div>`;
+  }
+}
+$('q').oninput = render;
+load();
+</script></main></body></html>
